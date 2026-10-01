@@ -514,23 +514,35 @@ class JobScraper:
 
     @staticmethod
     def fetch_job_details(job_id: str) -> dict:
-        return {}
+        """Fetch client info (country, rating) for a specific job posting."""
+        try:
+            res = execute_graphql(
+                JOB_DETAILS_BASIC_QUERY,
+                {"id": job_id},
+                alias="jobDetailsBasic"
+            )
+            posting = res.get("data", {}).get("marketplaceJobPosting") or {}
+            client_info = posting.get("clientCompanyPublic") or {}
+            location = client_info.get("location") or {}
+            evaluation = client_info.get("evaluation") or {}
 
-        # if not details or not details.get("description"):
-        #         logger.info(f"Skipping job '{job['title']}' (id: {job['id']}) because details are null or inaccessible.")
-        #         continue
-        #     access_level = str(details.get("access") or "").strip().lower()
-        #     # Common non-public access levels: "private", "users_only", "users", "members"
-        #     if access_level and access_level not in ("public", "public_job"):
-        #         logger.info(f"Skipping job '{job['title']}' (id: {job['id']}) because access is restricted to: {access_level}")
-        #         continue
-        #     # Populate job with details fields
-        #     if details.get("description"):
-        #         job["description"] = details["description"]
-        #     for key in ("client_country", "client_rating", "client_spent",
-        #                  "client_jobs_posted", "client_hire_rate", "client_member_since",
-        #                  "payment_verified", "project_duration"):
-        #         if details.get(key) is not None:
-        #             job[key] = details[key]
-        #     if details.get("proposal_count") is not None:
-        #         job["proposal_count"] = details["proposal_count"]
+            details = {}
+            country = location.get("country")
+            if country:
+                details["client_country"] = country
+
+            rating = evaluation.get("individualFeedbackRating")
+            if rating is not None:
+                try:
+                    details["client_rating"] = float(rating)
+                except (ValueError, TypeError):
+                    pass
+
+            content = posting.get("content") or {}
+            if content.get("description"):
+                details["description"] = content["description"]
+
+            return details
+        except Exception as e:
+            logger.warning(f"Could not fetch job details for {job_id}: {e}")
+            return {}
