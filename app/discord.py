@@ -1,3 +1,4 @@
+import os
 import asyncio
 import discord
 from discord.ext import commands, tasks
@@ -8,8 +9,9 @@ from app.database import DBManager, init_db
 from app.scraper import JobScraper
 
 intents = discord.Intents.default()
-intents.message_content = True
+intents.message_content = os.getenv("ENABLE_MESSAGE_CONTENT", "false").lower() == "true"
 bot = commands.Bot(command_prefix="!", intents=intents)
+db = DBManager
 
 is_scraping = False
 

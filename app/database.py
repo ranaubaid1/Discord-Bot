@@ -19,7 +19,6 @@ class Job(Base):
     experience_level = Column(String, nullable=True)
     skills = Column(Text, nullable=True)
     client_country = Column(String, nullable=True)
-    client_spent = Column(Float, nullable=True)
     client_rating = Column(Float, nullable=True)
     published_date = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
@@ -36,7 +35,6 @@ class Job(Base):
             "experience_level": self.experience_level,
             "skills": json.loads(self.skills) if self.skills else [],
             "client_country": self.client_country,
-            "client_spent": self.client_spent,
             "client_rating": self.client_rating,
             "published_date": self.published_date.isoformat() if self.published_date else None,
             "created_at": self.created_at.isoformat() if self.created_at else None,
@@ -89,7 +87,6 @@ class DBManager:
                 experience_level=job_data.get("experience_level"),
                 skills=skills_str,
                 client_country=job_data.get("client_country"),
-                client_spent=job_data.get("client_spent"),
                 client_rating=job_data.get("client_rating"),
                 published_date=pub_date
             )
@@ -139,3 +136,23 @@ class DBManager:
             return False
         finally:
             session.close()
+
+    @staticmethod
+    def cleanup_old_jobs(days: int = 30):
+        session = SessionLocal()
+        try:
+            from datetime import timedelta
+            cutoff = datetime.utcnow() - timedelta(days=days)
+            session.query(Job).filter(Job.created_at < cutoff).delete()
+            session.commit()
+        except Exception:
+            session.rollback()
+        finally:
+            session.close()
+
+    @staticmethod
+    def close():
+        try:
+            engine.dispose()
+        except Exception:
+            pass
