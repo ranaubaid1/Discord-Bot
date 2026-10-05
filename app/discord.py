@@ -87,11 +87,15 @@ class ThreadManager:
             return False
 
 
+_monitor_started = False
+
 @bot.event
 async def on_ready():
+    global _monitor_started
     logger.info(f"Discord Bot loaded as {bot.user.name} (ID: {bot.user.id})")
     init_db()
-    if not monitor_loop.is_running():
+    if not _monitor_started:
+        _monitor_started = True
         monitor_loop.start()
         logger.info("Background job monitoring loop started.")
 
